@@ -49,10 +49,6 @@ def acceleration(t, state, theta_func):
     return a
 
 
-# -------------------------------
-# 4. ODE-SYSTEM FÖR solve_ivp
-# -------------------------------
-
 def rocket_ode(t, state):
     x, y, vx, vy = state
 
@@ -73,10 +69,6 @@ x = sol.y[0]
 y = sol.y[1]
 acc1 = sol.y[2]
 acc2 = sol.y[3]
-
-# -------------------------------
-# 6. PLOTT RESULTAT
-# -------------------------------
 
 plt.plot(x, y, label="Raketens bana")
 plt.plot(acc1, acc2, label="Raketens acc")
