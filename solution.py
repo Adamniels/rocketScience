@@ -37,14 +37,14 @@ def acceleration(t, state, theta_func):
     v = np.array([vx, vy])        # Hastighetsvektor
 
     # massa och masstapp
-    m, mdot = mass_and_mprim(t)
+    m, mprim = mass_and_mprim(t)
 
     # Hämta riktning för raketens motor
     theta = theta_func(x,y)
     u = -km * np.array([np.cos(theta), np.sin(theta)])  # avgashastighetsvektor
 
     # Newton 2
-    a = g - (c * np.linalg.norm(v) * v) / m + (mdot / m) * u
+    a = g - (c * np.linalg.norm(v) * v) / m + (mprim / m) * u
 
     return a
 
@@ -67,11 +67,9 @@ sol = solve_ivp(rocket_ode, t_span, state0, t_eval=tt)
 t = sol.t
 x = sol.y[0]
 y = sol.y[1]
-acc1 = sol.y[2]
-acc2 = sol.y[3]
+
 
 plt.plot(x, y, label="Raketens bana")
-plt.plot(acc1, acc2, label="Raketens acc")
 plt.scatter(x_target, y_target, color="red", marker="x", s=100, label="Mål (80,60)")
 plt.xlabel("x-position [m]")
 plt.ylabel("y-position [m]")
