@@ -69,7 +69,7 @@ def theta_simple_solution(t: float, state: np.ndarray) -> float:
 def shift_angle(a):
     return (a + np.pi) % (2*np.pi)
 
-def theta_better_solution_first_try(t: float, state: np.ndarray) -> float:
+def theta_better_solution(t: float, state: np.ndarray) -> float:
     x, y, vx, vy = state
     if y < TURN_AFTER_20:
         return -np.pi/2  
@@ -99,7 +99,7 @@ t_eval = np.arange(t_span[0], t_span[1], 0.1)
 # Solving
 sol_simple = solve_ivp(ode_rhs, t_span, y0, t_eval=t_eval, args=(theta_simple_solution,))
 
-sol_better = solve_ivp(ode_rhs, t_span, y0, t_eval=t_eval, args=(theta_better_solution_first_try,))
+sol_better = solve_ivp(ode_rhs, t_span, y0, t_eval=t_eval, args=(theta_better_solution,))
 
 # Find closest distance 
 traj = sol_simple.y[:2].T                       
