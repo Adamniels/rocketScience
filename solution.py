@@ -51,6 +51,8 @@ def acceleration(t, state, theta_func):
 
 def rocket_ode(t, state):
     x, y, vx, vy = state
+    if y < 0:
+        return np.array([0,0,0,0])
 
     ax, ay = acceleration(t, state, theta_to_target)
 
@@ -58,9 +60,12 @@ def rocket_ode(t, state):
 
 
 h = 0.1
+y0 = 0
+y1 = 20
+
 state0 = [0.0, 0.0, 0.0, 0.0]
-t_span = (0, 20)   
-tt = np.arange(0,20,h)
+t_span = (y0, y1)   
+tt = np.arange(y0,y1,h)
 
 sol = solve_ivp(rocket_ode, t_span, state0, t_eval=tt)
 
