@@ -45,7 +45,7 @@ def ode_rhs(t: float, state: np.ndarray) -> np.ndarray:
     # state = [x, y, vx, vy] 
     x, y, vx, vy = state
     v = np.array([vx, vy], dtype=float)
-    thrust = u(t, state, theta_simple_solution)                   
+    thrust = u(t, state, theta_better_solution) # here can i change which function to use                 
     acc = (Fvec(t, v) + mprim(t) * thrust) / m(t)       
     return np.array([vx, vy, acc[0], acc[1]])
 
@@ -55,7 +55,33 @@ def theta_simple_solution(t: float, state: np.ndarray) -> float:
     if y < TURN_AFTER_20:
         return -np.pi/2  
     dx, dy = TARGET[0] - x, TARGET[1] - y
+
+    #Debug print
+    angle_to_target = np.arctan2(dy, dx)
+    angle_real_direction = np.arctan2(vy, vx)
+    if (y > 20 and y < 21):
+        print(f"y: {y}, angle to target: {angle_to_target} and real angle {angle_real_direction}")
+        
     return np.arctan2(dy, dx) - np.pi   # Change so direction i from the goal (thrust go other way)
+
+# Better solution
+# ta hänsyn till gravitation och hastighet
+def shift_angle(a):
+    return (a + np.pi) % (2*np.pi) - np.pi
+
+def theta_better_solution(t: float, state: np.ndarray) -> float:
+    x, y, vx, vy = state
+    if y < TURN_AFTER_20:
+        return -np.pi/2  
+    dx, dy = TARGET[0] - x, TARGET[1] - y
+    angle_t = np.arctan2(dy, dx)   # target angle
+    angle_v = np.arctan2(vy, vx)   # current v angle
+
+    # account current v angle and mirror in in target angle
+    acc_angle = shift_angle(2*angle_t - angle_v)
+
+    theta = shift_angle(acc_angle + np.pi)
+    return theta
 
 # Initials
 y0 = np.array([0.0, 0.0, 0.0, 0.0])   # [x, y, vx, vy]
@@ -67,7 +93,17 @@ t_eval = np.arange(t_span[0], t_span[1], 0.1)
 sol = solve_ivp(ode_rhs, t_span, y0, t_eval=t_eval)
 
 
-# Draw 
+# Find closest distance 
+traj = sol.y[:2].T                       
+dists = np.linalg.norm(traj - TARGET, axis=1)
+
+i_min = np.argmin(dists)
+t_min = sol.t[i_min]
+p_min = traj[i_min]
+d_min = dists[i_min]
+print(f"Diskret närmast: t={t_min:.3f}, p={p_min}, d={d_min:.3f} m")
+
+# Draw graph 
 plt.figure()
 plt.plot(sol.y[0], sol.y[1], label="Rocket")
 plt.plot(TARGET[0], TARGET[1], "ro", label="Goal")
@@ -77,4 +113,7 @@ plt.axis("equal")
 plt.grid(True)
 plt.legend()
 plt.title("Rocket with basix solution stearing")
+# Rita ut närmaste punkt
+plt.plot(p_min[0], p_min[1], "kx", ms=10, label="Närmaste (diskret)")
+plt.legend()
 plt.show()
