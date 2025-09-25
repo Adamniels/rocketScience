@@ -2,19 +2,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 
-# Konstanter
+# Konstanter 
 C = 0.05 # kg/m
 KM = 700 # m/s
 M0 = 8 # startmassa
-TARGET = np.array([80, 15])
+TARGET = np.array([80, 60])
 TURN_AFTER_20 = 20.0
 Gvec = np.array([0.00, -9.81]) # gravitation (bara i y-led)
 
 
-# Yttre krafter F 
-def Fvec(t:float, v: np.ndarray) -> np.ndarray:
+# Yttre krafter F vektor med krafter i x- och y-led 
+def Fvec(t, v): # v är vektorn för hastigheten
     mass = m(t)
-    drag = - C * np.linalg.norm(v) * v
+    drag = - C * np.linalg.norm(v) * v #luft motståndet
     gravity = mass * Gvec
     return gravity + drag
 
@@ -35,40 +35,45 @@ def mprim(t: float) -> float:
     else:
         raise ArithmeticError(f"t should be a positive number")
 
-# motor kraft (thrust)
-def u(t, state, theta, theta_func):
+# Motor kraft (thrust)
+def u(t, state, theta_func, theta):
+    '''I den här lösningen så skickar vi även in theta som är 
+    den vinkeln som vi testar för tillfället så att vår theta 
+    funktion kan skicka tillbaka den'''
+
     theta_thrust = theta_func(state, theta)
     return KM * np.array([np.cos(theta_thrust), np.sin(theta_thrust)])
 
 # ODE
 def ode_rhs(t, state, theta):
     # state = [x, y, vx, vy] 
-    x, y, vx, vy = state
-    v = np.array([vx, vy], dtype=float) # så vi är säkra på att det blir en array av flyttal
-    thrust = u(t, state, theta, theta_func)
+    _, _, vx, vy = state
+    v = np.array([vx, vy])
+    thrust = u(t, state, theta_func, theta)
     acc = (Fvec(t, v) + mprim(t) * thrust) / m(t)       
     return np.array([vx, vy, acc[0], acc[1]])
 
 def theta_func(state, theta):
-    x, y, vx, vy = state
-    if y < TURN_AFTER_20: # TODO: detta ställer till det efter
+    '''Theta funktion som returnera tillbaka en konstant så länge vi inte är under 20 i y-led'''
+    _, y, _, _ = state
+    if y < TURN_AFTER_20: 
         return -np.pi/2  
     return theta + np.pi
 
 # Helper för att hitta closest distance i en körning av ett specielt theta
-def simulate_one_theta(theta):
-    sol = solve_ivp(ode_rhs, t_span, y0, t_eval=t_eval, args=(theta,))
+def simulate_one_theta(theta, ode, tspan, y0, teval):
+    solution = solve_ivp(ode, tspan, y0, t_eval=teval, args=(theta,))
     
-    traj = sol.y[:2].T # array med punkterna                       
-    dists = np.linalg.norm(traj - TARGET, axis=1) # avstånd med längd på vektorn
-
-    i_min = np.argmin(dists) # hämtar index på minsta distsans
-    t_min = sol.t[i_min]
-    p_min = traj[i_min]
-    d_min = dists[i_min]
-    return i_min, t_min, p_min, d_min 
+    trajectory = solution.y[:2].T # tar 2 första arrayerna som innehålller x och y och transposar dem så att vi får fram punkter                       
+    distances = np.linalg.norm(trajectory - TARGET, axis=1) # avstånd med längd på vektorn, med punkerna från tidigare steg, axis = 1 för att vi vill beräkna längden för varje rad
 
 
+    min_index = np.argmin(distances) # hämtar index på minsta distans
+    min_distance = distances[min_index]
+    return min_distance 
+
+
+# Start värden
 y0 = np.array([0.0, 0.0, 0.0, 0.0])   # [x, y, vx, vy]
 t_span = (0, 40)                       
 t_eval = np.arange(t_span[0], t_span[1], 0.1)  
@@ -79,28 +84,28 @@ low, high = -np.pi/2, np.pi/2
 
 best_theta = 0.0
 
-# använd simulate_one_theta för initialt bästa
-i_min, t_min, p_min, best_d = simulate_one_theta(best_theta)
+# Använd simulate_one_theta för initialt bästa
+best_distance = simulate_one_theta(best_theta, ode_rhs, t_span, y0, t_eval)
 
 for _ in range(20):  # 20 iterationer räcker
     mid = (0.5 * (low + high))
     step = 0.1 * (high - low)               
     right = (mid + step) 
 
-    i_m, t_m, p_m, d_m = simulate_one_theta(mid)
-    i_r, t_r, p_r, d_r = simulate_one_theta(right)
+    min_distance_mid = simulate_one_theta(mid, ode_rhs, t_span, y0, t_eval)
+    min_distance_right = simulate_one_theta(right, ode_rhs, t_span, y0, t_eval)
 
-    if d_r < d_m:
+    if min_distance_right < min_distance_mid:
         # bättre åt höger -> flytta intervallet höger
         low = mid
-        cur_theta, cur_d = right, d_r
+        cur_theta, cur_distance = right, min_distance_right
     else:
         # bättre på mitten -> flytta intervallet vänster (mot mid)
         high = right
-        cur_theta, cur_d = mid, d_m
+        cur_theta, cur_distance = mid, min_distance_mid
 
-    if cur_d < best_d:
-        best_d = cur_d
+    if cur_distance < best_distance:
+        best_distance = cur_distance
         best_theta = cur_theta
 
     if (high - low) < 1e-4:
@@ -108,22 +113,22 @@ for _ in range(20):  # 20 iterationer räcker
 
 # Visa Resultat
 theta = best_theta
-sol = solve_ivp(ode_rhs, t_span, y0, t_eval=t_eval, args=(theta,))
+best_solution = solve_ivp(ode_rhs, t_span, y0, t_eval=t_eval, args=(theta,))
 
-traj = sol.y[:2].T
-dists = np.linalg.norm(traj - TARGET, axis=1)
-best_i = int(np.argmin(dists))
-p_min = traj[best_i]
+trajectory = best_solution.y[:2].T
+distances = np.linalg.norm(trajectory - TARGET, axis=1)
+min_index = int(np.argmin(distances))
+min_cordinate = trajectory[min_index]
 
 print(f"Bästa vinkel θ = {theta:.6f} rad = {np.degrees(theta):.3f}°")
-print(f"Minsta avstånd ≈ {best_d:.3f} m vid t = {sol.t[best_i]:.2f} s, punkt {p_min}")
+print(f"Minsta avstånd ≈ {best_distance:.3f} m vid t = {best_solution.t[min_index]:.2f} s, punkt {min_cordinate}")
 
 # Plotta
-import matplotlib.pyplot as plt
 plt.figure()
-plt.plot(sol.y[0], sol.y[1], label=f"θ={np.degrees(theta):.2f}°")
+plt.plot(best_solution.y[0], best_solution.y[1], label=f"θ={np.degrees(theta):.2f}°")
 plt.plot(TARGET[0], TARGET[1], "ro", label="Mål")
-plt.plot(p_min[0], p_min[1], "kx", ms=10, label="Närmast")
+plt.plot(min_cordinate[0], min_cordinate[1], "kx", ms=10, label="Närmast")
 plt.axis("equal"); plt.grid(True); plt.legend()
 plt.xlabel("x [m]"); plt.ylabel("y [m]")
+plt.ylim(bottom=0)   
 plt.show()
