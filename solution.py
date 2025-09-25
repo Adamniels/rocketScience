@@ -60,16 +60,31 @@ def theta_simple_solution(t: float, state: np.ndarray) -> float:
     return np.arctan2(dy, dx) - np.pi   # Ändra så riktningen är bort från målet efter som motorn är riktad motsatt riktningen vi åker i
 
 
+def RK4(f, tspan, u0, dt, *args):
+    t_vec = np.arange(tspan[0],tspan[1]+1.e-14,dt)
+    dt_vec = dt*np.ones_like(t_vec)
+    if t_vec[-1] < tspan[1]:
+        t_vec = np.append(t_vec,tspan[1])
+        dt_vec = np.append(dt_vec, t_vec[-1]-t_vec[-2])
+    u = np.zeros((len(t_vec),len(u0)))
+    u[0,:]= u0
+    for i in range(len(t_vec)-1):
+        h = dt_vec[i]
+        k1 = f(t_vec[i], u[i,:], *args)
+        k2 = f(t_vec[i]+0.5*h, u[i,:]+0.5*h*k1, *args)
+        k3 = f(t_vec[i]+0.5*h, u[i,:]+0.5*h*k2, *args)
+        k4 = f(t_vec[i+1], u[i,:]+h*k3, *args)
+        u[i+1,:] = u[i,:] + h*(k1+ 2*k2 + 2*k3 + k4)/6
+    return t_vec, u
 
 # Startvärden
 y0 = np.array([0.0, 0.0, 0.0, 0.0])   # [x, y, vx, vy]
 t_span = (0, 40)                       
 t_eval = np.arange(t_span[0], t_span[1], 0.1)  
 
-
 # Lös
 sol = solve_ivp(ode_rhs, t_span, y0, t_eval=t_eval, args=(theta_simple_solution,))
-
+sol_rk4_t, sol_rk4_y = RK4(ode_rhs, t_span, y0, 0.1, theta_simple_solution)
 
 # Hitta närmsta distans
 trajectory = sol.y[:2].T                       
@@ -85,7 +100,8 @@ print(f"Bas lösning närmast: t={t_min:.3f}, p={cordinate_min}, d={distance_min
 # Plotta 
 plt.figure()
 plt.plot(sol.y[0], sol.y[1], label="Racket Bas Lösning")
-plt.plot(TARGET[0], TARGET[1], "ro", label="Goal")
+plt.plot(sol_rk4_y[:,0], sol_rk4_y[:,1], label="Racket Bas Lösning (egen RK4)")
+plt.plot(TARGET[0], TARGET[1], "ro", label="Mål")
 plt.xlabel("x [m]")
 plt.ylabel("y [m]")
 plt.axis("equal")
