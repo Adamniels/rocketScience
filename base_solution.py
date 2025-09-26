@@ -50,7 +50,7 @@ def ode_rhs(t, state, theta_func):
     return np.array([vx, vy, acc[0], acc[1]])
 
 # Bas lösning, vinklar bara mot målet i varje punkt 
-def theta_simple_solution(t: float, state: np.ndarray) -> float:
+def theta_simple_solution(t, state):
     x, y, vx, vy = state
     if y < TURN_AFTER_20:
         return -np.pi/2  
@@ -59,7 +59,7 @@ def theta_simple_solution(t: float, state: np.ndarray) -> float:
         
     return np.arctan2(dy, dx) - np.pi   # Ändra så riktningen är bort från målet efter som motorn är riktad motsatt riktningen vi åker i
 
-
+# Egen rungekutta lösare
 def RK4(f, tspan, u0, dt, *args):
     t_vec = np.arange(tspan[0],tspan[1]+1.e-14,dt)
     dt_vec = dt*np.ones_like(t_vec)

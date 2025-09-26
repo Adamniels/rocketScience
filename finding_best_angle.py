@@ -19,7 +19,7 @@ def Fvec(t, v): # v är vektorn för hastigheten
     return gravity + drag
 
 # Mass funktioner
-def m(t: float) -> float:
+def m(t):
     if (t >= 0 and t <= 10):
         return 8.0 - 0.4*t
     elif( t > 10):
@@ -27,7 +27,7 @@ def m(t: float) -> float:
     else:
         raise ArithmeticError(f"t should be a positive number")
 
-def mprim(t: float) -> float:
+def mprim(t):
     if (t >= 0  and t <= 10):
         return -0.4
     elif( t > 10):
@@ -39,7 +39,7 @@ def mprim(t: float) -> float:
 def u(t, state, theta_func, theta):
     '''I den här lösningen så skickar vi även in theta som är 
     den vinkeln som vi testar för tillfället så att vår theta 
-    funktion kan skicka tillbaka den'''
+    funktion kan skicka tillbaka den när vi är äver y=20'''
 
     theta_thrust = theta_func(state, theta)
     return KM * np.array([np.cos(theta_thrust), np.sin(theta_thrust)])
@@ -49,11 +49,11 @@ def ode_rhs(t, state, theta):
     # state = [x, y, vx, vy] 
     _, _, vx, vy = state
     v = np.array([vx, vy])
-    thrust = u(t, state, theta_func, theta)
+    thrust = u(t, state, theta_fixed_func, theta)
     acc = (Fvec(t, v) + mprim(t) * thrust) / m(t)       
     return np.array([vx, vy, acc[0], acc[1]])
 
-def theta_func(state, theta):
+def theta_fixed_func(state, theta):
     '''Theta funktion som returnera tillbaka en konstant så länge vi inte är under 20 i y-led'''
     _, y, _, _ = state
     if y < TURN_AFTER_20: 
@@ -131,4 +131,5 @@ plt.plot(min_cordinate[0], min_cordinate[1], "kx", ms=10, label="Närmast")
 plt.axis("equal"); plt.grid(True); plt.legend()
 plt.xlabel("x [m]"); plt.ylabel("y [m]")
 plt.ylim(bottom=0)   
+plt.title("Racket med att hitta bästa vinkel lösning")
 plt.show()
