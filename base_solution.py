@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy._core.records import array
 from scipy.integrate import solve_ivp
 
 # Konstanter 
@@ -44,6 +45,11 @@ def u(t, state, theta_func ):
 def ode_rhs(t, state, theta_func):
     # state = [x, y, vx, vy] 
     x, y, vx, vy = state
+
+    # För bättre print
+    if(y < 0):
+        return np.array([0,0,0,0])
+
     v = np.array([vx, vy], dtype=float)
     thrust = u(t, state, theta_func)
     acc = (Fvec(t, v) + mprim(t) * thrust) / m(t)       
@@ -94,22 +100,22 @@ index_min = np.argmin(distances)
 t_min = sol.t[index_min]
 cordinate_min = trajectory[index_min]
 distance_min = distances[index_min]
-print(f"Bas lösning närmast: t={t_min:.3f}, p={cordinate_min}, d={distance_min:.3f} m")
+print(f"Baslösning närmast: t={t_min:.3f}, p={cordinate_min}, d={distance_min:.3f} m")
 
 
 # Plotta 
 plt.figure()
-plt.plot(sol.y[0], sol.y[1], label="Racket Bas Lösning")
-plt.plot(sol_rk4_y[:,0], sol_rk4_y[:,1], label="Racket Bas Lösning (egen RK4)")
+plt.plot(sol.y[0], sol.y[1], label="Raket Baslösning")
+plt.plot(sol_rk4_y[:,0], sol_rk4_y[:,1], label="Raket Baslösning (egen RK4)")
 plt.plot(TARGET[0], TARGET[1], "ro", label="Mål")
 plt.xlabel("x [m]")
 plt.ylabel("y [m]")
 plt.axis("equal")
 plt.grid(True)
 plt.legend()
-plt.title("Racket med bas lösnings styrning")
+plt.title("Raket med baslösningsstyrning")
 
 # Rita ut närmaste punkt
-plt.plot(cordinate_min[0], cordinate_min[1], "kx", ms=10, label="Närmaste")
+plt.plot(cordinate_min[0], cordinate_min[1], "kx", ms=10, label=f"Närmaste punkt: t={t_min:.3f}, p={cordinate_min}, d={distance_min:.3f} m")
 plt.legend()
 plt.show()

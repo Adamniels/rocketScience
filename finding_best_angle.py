@@ -47,7 +47,12 @@ def u(t, state, theta_func, theta):
 # ODE
 def ode_rhs(t, state, theta):
     # state = [x, y, vx, vy] 
-    _, _, vx, vy = state
+    _, y, vx, vy = state
+
+    # För bättre print
+    if(y < 0):
+        return np.array([0,0,0,0])
+
     v = np.array([vx, vy])
     thrust = u(t, state, theta_fixed_func, theta)
     acc = (Fvec(t, v) + mprim(t) * thrust) / m(t)       
@@ -108,7 +113,7 @@ for _ in range(20):  # 20 iterationer räcker
         best_distance = cur_distance
         best_theta = cur_theta
 
-    if (high - low) < 1e-4:
+    if (high - low) < 1e-4: # Om skillnaden är så liten emellan vinklarna så finns det ingen mening att fortsätta, så avbryt
         break
 
 # Visa Resultat
@@ -127,9 +132,9 @@ print(f"Minsta avstånd ≈ {best_distance:.3f} m vid t = {best_solution.t[min_i
 plt.figure()
 plt.plot(best_solution.y[0], best_solution.y[1], label=f"θ={np.degrees(theta):.2f}°")
 plt.plot(TARGET[0], TARGET[1], "ro", label="Mål")
-plt.plot(min_cordinate[0], min_cordinate[1], "kx", ms=10, label="Närmast")
+plt.plot(min_cordinate[0], min_cordinate[1], "kx", ms=10, label=f"Närmast, Minsta avstånd ≈ {best_distance:.3f} m vid t = {best_solution.t[min_index]:.2f} s, punkt {min_cordinate}")
 plt.axis("equal"); plt.grid(True); plt.legend()
 plt.xlabel("x [m]"); plt.ylabel("y [m]")
 plt.ylim(bottom=0)   
-plt.title("Racket med att hitta bästa vinkel lösning")
+plt.title("Styrningslösning med att hitta bästa vinkel")
 plt.show()
